@@ -59,6 +59,10 @@ jobs:
             exit 1
           fi
 
+      - name: Log in Codex
+        if: matrix.harness == 'codex'
+        run: printenv OPENAI_API_KEY | codex login --with-api-key
+
       - name: Run Dynobox
         run: |
           report_path="dynobox-${DYNOBOX_HARNESS}.ndjson"
