@@ -1,0 +1,38 @@
+name: Dynobox
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  dynobox:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    name: dynobox
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      DYNOBOX_TARGET: .agents/skills
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run Dynobox
+        uses: ./.github/actions/run-dynobox
+        with:
+          target: ${{ env.DYNOBOX_TARGET }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          comment-on-pr: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && 'true' || 'false' }}
+          github-token: ${{ github.token }}
+          pr-number: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}

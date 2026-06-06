@@ -5,6 +5,7 @@
   "scripts": {
     "test:agents": "dynobox run .agents/skills",
     "test:agents:debug": "dynobox run .agents/skills --debug",
+    "test:agents:claude": "dynobox run .agents/skills --harness claude-code",
     "test:agents:codex": "dynobox run .agents/skills --harness codex --permission-mode dangerous"
   },
   "keywords": [],
@@ -12,7 +13,7 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "dynobox": "^0.0.10"
+    "dynobox": "^0.4.0"
   },
   "private": true
 }

@@ -1,0 +1,247 @@
+name: Run Dynobox
+description: Run Dynobox and publish a combined report summary.
+
+inputs:
+  target:
+    description: Dynobox target path.
+    required: false
+    default: .agents/skills
+  anthropic-api-key:
+    description: Anthropic API key for claude-code runs.
+    required: false
+    default: ''
+  openai-api-key:
+    description: OpenAI API key for codex runs.
+    required: false
+    default: ''
+  comment-on-pr:
+    description: Whether to upsert a pull request comment.
+    required: false
+    default: 'false'
+  github-token:
+    description: GitHub token used for PR comments.
+    required: false
+    default: ''
+  pr-number:
+    description: Pull request number for PR comments.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: npm
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Install Claude Code
+      shell: bash
+      run: npm install -g @anthropic-ai/claude-code
+
+    - name: Install Codex
+      shell: bash
+      run: npm install -g @openai/codex
+
+    - name: Verify harness secrets
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+      run: |
+        if [ -z "$ANTHROPIC_API_KEY" ]; then
+          echo "ANTHROPIC_API_KEY is required for the Dynobox job." >&2
+          exit 1
+        fi
+
+        if [ -z "$OPENAI_API_KEY" ]; then
+          echo "OPENAI_API_KEY is required for the Dynobox job." >&2
+          exit 1
+        fi
+
+    - name: Log in Codex
+      shell: bash
+      env:
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+      run: printenv OPENAI_API_KEY | codex login --with-api-key
+
+    - name: Run Dynobox
+      shell: bash
+      env:
+        DYNOBOX_TARGET: ${{ inputs.target }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+      run: |
+        report_path="dynobox.ndjson"
+        summary_path="dynobox.md"
+        status_path="dynobox.status"
+
+        set +e
+        npx dynobox run "$DYNOBOX_TARGET" \
+          --reporter json \
+          > "$report_path"
+        status=$?
+        printf '%s' "$status" > "$status_path"
+        set -e
+
+        REPORT_PATH="$report_path" SUMMARY_PATH="$summary_path" node --input-type=module <<'NODE'
+        import {appendFileSync, readFileSync, writeFileSync} from 'node:fs';
+
+        const reportPath = process.env.REPORT_PATH;
+        const summaryPath = process.env.SUMMARY_PATH;
+        const raw = readFileSync(reportPath, 'utf8').trim();
+        const records = raw.length === 0
+          ? []
+          : raw.split('\n').filter(Boolean).map((line) => JSON.parse(line));
+        const summary = records.find((record) => record.type === 'summary');
+        const jobs = records.filter((record) => record.type === 'job');
+        const formatHarness = (harness) => {
+          if (harness === undefined) {
+            return 'unknown harness';
+          }
+
+          return [harness.id, harness.model, harness.permissionMode]
+            .filter(Boolean)
+            .join('/');
+        };
+
+        const lines = ['## Dynobox', ''];
+        if (summary === undefined) {
+          lines.push('No summary record was produced. Check the step logs for config or discovery errors.');
+        } else {
+          lines.push(
+            `Status: ${summary.status}`,
+            `Jobs: ${summary.totals.passed}/${summary.totals.jobs} passed`,
+            `Warnings: ${summary.totals.warnings}`,
+            `Failed jobs: ${summary.failedJobs.length === 0 ? 'none' : summary.failedJobs.join(', ')}`,
+          );
+
+          if (summary.matrix?.cells?.length > 0) {
+            lines.push('', '| Harness | Scenario | Result | Failed jobs |', '| --- | --- | --- | --- |');
+
+            for (const cell of summary.matrix.cells) {
+              const harness = formatHarness(cell.harness);
+              const result = `${cell.passed}/${cell.total} passed`;
+              const failedJobs = cell.failedJobs.length === 0 ? 'none' : cell.failedJobs.join('<br>');
+              lines.push(`| ${harness} | ${cell.scenarioName} | ${result} | ${failedJobs} |`);
+            }
+          }
+        }
+
+        const failedDiagnostics = jobs
+          .filter((job) => job.passed === false && job.diagnostics?.length > 0)
+          .flatMap((job) => job.diagnostics.map((diagnostic) => ({job, diagnostic})))
+          .slice(0, 3);
+
+        for (const {job, diagnostic} of failedDiagnostics) {
+          lines.push(
+            '',
+            `Failure details for ${formatHarness(job.harness)} / ${job.scenario.name}:`,
+            '```text',
+            diagnostic.slice(0, 2000),
+            '```',
+          );
+        }
+        lines.push('');
+
+        const body = lines.join('\n');
+        writeFileSync(summaryPath, body);
+        appendFileSync(process.env.GITHUB_STEP_SUMMARY, body);
+        NODE
+
+    - name: Comment Dynobox report
+      if: ${{ always() && inputs.comment-on-pr == 'true' && inputs.pr-number != '' && inputs.github-token != '' }}
+      continue-on-error: true
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        SUMMARY_PATH: dynobox.md
+      run: |
+        node --input-type=module <<'NODE'
+        import {existsSync, readFileSync} from 'node:fs';
+
+        const marker = '<!-- dynobox-report -->';
+        const summaryPath = process.env.SUMMARY_PATH;
+        const summary = existsSync(summaryPath)
+          ? readFileSync(summaryPath, 'utf8')
+          : '## Dynobox\n\nNo report summary was produced. Check the workflow logs.\n';
+        const body = `${marker}\n${summary}`;
+        const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+        const issueNumber = process.env.PR_NUMBER;
+        const headers = {
+          authorization: `Bearer ${process.env.GH_TOKEN}`,
+          accept: 'application/vnd.github+json',
+          'x-github-api-version': '2022-11-28',
+        };
+        const baseUrl = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`;
+        const request = async (url, options = {}) => {
+          const response = await fetch(url, options);
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`${options.method ?? 'GET'} ${url} failed: ${response.status} ${response.statusText}\n${text}`);
+          }
+          return response;
+        };
+
+        console.log(`Upserting Dynobox report comment on PR #${issueNumber}.`);
+        try {
+          const existing = await request(`${baseUrl}?per_page=100`, {headers}).then((response) => response.json());
+          const comment = existing.find((item) => item.body?.includes(marker));
+
+          if (comment === undefined) {
+            await request(baseUrl, {
+              method: 'POST',
+              headers: {...headers, 'content-type': 'application/json'},
+              body: JSON.stringify({body}),
+            });
+            console.log('Created Dynobox report comment.');
+          } else {
+            await request(comment.url, {
+              method: 'PATCH',
+              headers: {...headers, 'content-type': 'application/json'},
+              body: JSON.stringify({body}),
+            });
+            console.log('Updated Dynobox report comment.');
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.log(`::warning::Could not upsert Dynobox PR comment: ${message.replaceAll('\n', ' ')}`);
+        }
+        NODE
+
+    - name: Explain skipped PR comment
+      if: ${{ always() && (inputs.comment-on-pr != 'true' || inputs.pr-number == '' || inputs.github-token == '') }}
+      shell: bash
+      env:
+        COMMENT_ON_PR: ${{ inputs.comment-on-pr }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        HAS_GITHUB_TOKEN: ${{ inputs.github-token != '' && 'true' || 'false' }}
+      run: |
+        echo "Dynobox PR comment skipped. comment-on-pr=${COMMENT_ON_PR}, pr-number=${PR_NUMBER:-unset}, has-github-token=${HAS_GITHUB_TOKEN}."
+
+    - name: Upload Dynobox report
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: dynobox-report
+        path: |
+          dynobox.ndjson
+          dynobox.md
+        if-no-files-found: warn
+
+    - name: Fail on Dynobox status
+      if: always()
+      shell: bash
+      run: |
+        status_path="dynobox.status"
+        status=1
+        if [ -f "$status_path" ]; then
+          status="$(cat "$status_path")"
+        fi
+        exit "$status"
