@@ -193,23 +193,45 @@ runs:
           'x-github-api-version': '2022-11-28',
         };
         const baseUrl = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`;
-        const existing = await fetch(`${baseUrl}?per_page=100`, {headers}).then((response) => response.json());
+        const request = async (url, options = {}) => {
+          const response = await fetch(url, options);
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`${options.method ?? 'GET'} ${url} failed: ${response.status} ${response.statusText}\n${text}`);
+          }
+          return response;
+        };
+
+        console.log(`Upserting Dynobox ${harness} report comment on PR #${issueNumber}.`);
+        const existing = await request(`${baseUrl}?per_page=100`, {headers}).then((response) => response.json());
         const comment = existing.find((item) => item.body?.includes(marker));
 
         if (comment === undefined) {
-          await fetch(baseUrl, {
+          await request(baseUrl, {
             method: 'POST',
             headers: {...headers, 'content-type': 'application/json'},
             body: JSON.stringify({body}),
           });
+          console.log(`Created Dynobox ${harness} report comment.`);
         } else {
-          await fetch(comment.url, {
+          await request(comment.url, {
             method: 'PATCH',
             headers: {...headers, 'content-type': 'application/json'},
             body: JSON.stringify({body}),
           });
+          console.log(`Updated Dynobox ${harness} report comment.`);
         }
         NODE
+
+    - name: Explain skipped PR comment
+      if: ${{ always() && (inputs.comment-on-pr != 'true' || inputs.pr-number == '' || inputs.github-token == '') }}
+      shell: bash
+      env:
+        COMMENT_ON_PR: ${{ inputs.comment-on-pr }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        HAS_GITHUB_TOKEN: ${{ inputs.github-token != '' && 'true' || 'false' }}
+      run: |
+        echo "Dynobox PR comment skipped. comment-on-pr=${COMMENT_ON_PR}, pr-number=${PR_NUMBER:-unset}, has-github-token=${HAS_GITHUB_TOKEN}."
 
     - name: Upload Dynobox report
       if: always()
