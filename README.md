@@ -23,8 +23,15 @@ The evaluation checks that the agent:
 ## Run It
 
 ```sh
-npm install --save-dev dynobox
+npm ci
 npm run test:agents
+```
+
+To run only one harness for local debugging:
+
+```sh
+npm run test:agents:claude
+npm run test:agents:codex
 ```
 
 For debugging:
@@ -33,12 +40,20 @@ For debugging:
 npm run test:agents:debug
 ```
 
-To try the same skill test with Codex instead of Claude Code:
+CI runs the same Dynobox test in GitHub Actions against both Claude Code and
+Codex as separate matrix jobs, writes one NDJSON report per harness, and uploads
+each report as a build artifact. Configure these repository secrets before
+enabling the workflow:
 
-```sh
-npm run test:agents:codex
-```
+- `ANTHROPIC_API_KEY` for Claude Code.
+- `OPENAI_API_KEY` for Codex.
 
 ## Version Note
 
-This project intentionally uses `dynobox run .agents/skills`. That command relies on Dynobox directory discovery for `*.dyno.*` files. If the published npm version you have installed still expects an explicit config file, use the local unreleased Dynobox build or install the next release before running this example.
+This project intentionally uses `dynobox run .agents/skills`. That command relies on Dynobox directory discovery for `*.dyno.*` files and requires Dynobox 0.4.0 or newer.
+
+Single-harness npm scripts use Dynobox's `--harness` flag for local debugging.
+In Dynobox 0.4.0, that flag selects a harness by ID but does not preserve the
+configured model metadata from the dyno file, so the full `npm run test:agents`
+command and CI's `DYNOBOX_HARNESS` matrix are the source of truth for the
+configured model matrix.

@@ -1,0 +1,121 @@
+name: Dynobox
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  dynobox:
+    name: dynobox (${{ matrix.harness }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        harness:
+          - claude-code
+          - codex
+
+    env:
+      DYNOBOX_TARGET: .agents/skills
+      DYNOBOX_HARNESS: ${{ matrix.harness }}
+      DYNOBOX_CLAUDE_MODEL: sonnet
+      DYNOBOX_CODEX_MODEL: gpt-5.4-mini
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Claude Code
+        if: matrix.harness == 'claude-code'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Install Codex
+        if: matrix.harness == 'codex'
+        run: npm install -g @openai/codex
+
+      - name: Verify harness secret
+        run: |
+          if [ "$DYNOBOX_HARNESS" = "claude-code" ] && [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY is required for the claude-code Dynobox job." >&2
+            exit 1
+          fi
+
+          if [ "$DYNOBOX_HARNESS" = "codex" ] && [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY is required for the codex Dynobox job." >&2
+            exit 1
+          fi
+
+      - name: Run Dynobox
+        run: |
+          report_path="dynobox-${DYNOBOX_HARNESS}.ndjson"
+
+          set +e
+          npx dynobox run "$DYNOBOX_TARGET" \
+            --reporter json \
+            > "$report_path"
+          status=$?
+          set -e
+
+          REPORT_PATH="$report_path" node --input-type=module <<'NODE'
+          import {appendFileSync, readFileSync} from 'node:fs';
+
+          const harness = process.env.DYNOBOX_HARNESS;
+          const reportPath = process.env.REPORT_PATH;
+          const raw = readFileSync(reportPath, 'utf8').trim();
+          const records = raw.length === 0
+            ? []
+            : raw.split('\n').filter(Boolean).map((line) => JSON.parse(line));
+          const summary = records.find((record) => record.type === 'summary');
+
+          const lines = [`## Dynobox (${harness})`, ''];
+          if (summary === undefined) {
+            lines.push('No summary record was produced. Check the step logs for config or discovery errors.');
+          } else {
+            lines.push(
+              `Status: ${summary.status}`,
+              `Jobs: ${summary.totals.passed}/${summary.totals.jobs} passed`,
+              `Warnings: ${summary.totals.warnings}`,
+              `Failed jobs: ${summary.failedJobs.length === 0 ? 'none' : summary.failedJobs.join(', ')}`,
+            );
+
+            if (summary.matrix?.cells?.length > 0) {
+              lines.push('', '| Harness | Scenario | Result | Failed jobs |', '| --- | --- | --- | --- |');
+
+              for (const cell of summary.matrix.cells) {
+                const harness = [cell.harness.id, cell.harness.model, cell.harness.permissionMode]
+                  .filter(Boolean)
+                  .join('/');
+                const result = `${cell.passed}/${cell.total} passed`;
+                const failedJobs = cell.failedJobs.length === 0 ? 'none' : cell.failedJobs.join('<br>');
+                lines.push(`| ${harness} | ${cell.scenarioName} | ${result} | ${failedJobs} |`);
+              }
+            }
+          }
+          lines.push('');
+
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
+          NODE
+
+          exit "$status"
+
+      - name: Upload Dynobox report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dynobox-${{ matrix.harness }}-report
+          path: dynobox-${{ matrix.harness }}.ndjson
+          if-no-files-found: warn
