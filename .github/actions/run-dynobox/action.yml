@@ -1,22 +1,11 @@
 name: Run Dynobox
-description: Run Dynobox for one harness and publish a report summary.
+description: Run Dynobox and publish a combined report summary.
 
 inputs:
   target:
     description: Dynobox target path.
     required: false
     default: .agents/skills
-  harness:
-    description: Harness ID to run.
-    required: true
-  claude-model:
-    description: Claude model metadata for Dynobox.
-    required: false
-    default: sonnet
-  codex-model:
-    description: Codex model metadata for Dynobox.
-    required: false
-    default: gpt-5.4-mini
   anthropic-api-key:
     description: Anthropic API key for claude-code runs.
     required: false
@@ -52,34 +41,30 @@ runs:
       run: npm ci
 
     - name: Install Claude Code
-      if: ${{ inputs.harness == 'claude-code' }}
       shell: bash
       run: npm install -g @anthropic-ai/claude-code
 
     - name: Install Codex
-      if: ${{ inputs.harness == 'codex' }}
       shell: bash
       run: npm install -g @openai/codex
 
-    - name: Verify harness secret
+    - name: Verify harness secrets
       shell: bash
       env:
-        DYNOBOX_HARNESS: ${{ inputs.harness }}
-        ANTHROPIC_API_KEY: ${{ inputs.harness == 'claude-code' && inputs.anthropic-api-key || '' }}
-        OPENAI_API_KEY: ${{ inputs.harness == 'codex' && inputs.openai-api-key || '' }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
       run: |
-        if [ "$DYNOBOX_HARNESS" = "claude-code" ] && [ -z "$ANTHROPIC_API_KEY" ]; then
-          echo "ANTHROPIC_API_KEY is required for the claude-code Dynobox job." >&2
+        if [ -z "$ANTHROPIC_API_KEY" ]; then
+          echo "ANTHROPIC_API_KEY is required for the Dynobox job." >&2
           exit 1
         fi
 
-        if [ "$DYNOBOX_HARNESS" = "codex" ] && [ -z "$OPENAI_API_KEY" ]; then
-          echo "OPENAI_API_KEY is required for the codex Dynobox job." >&2
+        if [ -z "$OPENAI_API_KEY" ]; then
+          echo "OPENAI_API_KEY is required for the Dynobox job." >&2
           exit 1
         fi
 
     - name: Log in Codex
-      if: ${{ inputs.harness == 'codex' }}
       shell: bash
       env:
         OPENAI_API_KEY: ${{ inputs.openai-api-key }}
@@ -89,14 +74,12 @@ runs:
       shell: bash
       env:
         DYNOBOX_TARGET: ${{ inputs.target }}
-        DYNOBOX_HARNESS: ${{ inputs.harness }}
-        DYNOBOX_CLAUDE_MODEL: ${{ inputs.claude-model }}
-        DYNOBOX_CODEX_MODEL: ${{ inputs.codex-model }}
-        ANTHROPIC_API_KEY: ${{ inputs.harness == 'claude-code' && inputs.anthropic-api-key || '' }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
       run: |
-        report_path="dynobox-${DYNOBOX_HARNESS}.ndjson"
-        summary_path="dynobox-${DYNOBOX_HARNESS}.md"
-        status_path="dynobox-${DYNOBOX_HARNESS}.status"
+        report_path="dynobox.ndjson"
+        summary_path="dynobox.md"
+        status_path="dynobox.status"
 
         set +e
         npx dynobox run "$DYNOBOX_TARGET" \
@@ -109,7 +92,6 @@ runs:
         REPORT_PATH="$report_path" SUMMARY_PATH="$summary_path" node --input-type=module <<'NODE'
         import {appendFileSync, readFileSync, writeFileSync} from 'node:fs';
 
-        const harness = process.env.DYNOBOX_HARNESS;
         const reportPath = process.env.REPORT_PATH;
         const summaryPath = process.env.SUMMARY_PATH;
         const raw = readFileSync(reportPath, 'utf8').trim();
@@ -118,8 +100,17 @@ runs:
           : raw.split('\n').filter(Boolean).map((line) => JSON.parse(line));
         const summary = records.find((record) => record.type === 'summary');
         const jobs = records.filter((record) => record.type === 'job');
+        const formatHarness = (harness) => {
+          if (harness === undefined) {
+            return 'unknown harness';
+          }
 
-        const lines = [`## Dynobox (${harness})`, ''];
+          return [harness.id, harness.model, harness.permissionMode]
+            .filter(Boolean)
+            .join('/');
+        };
+
+        const lines = ['## Dynobox', ''];
         if (summary === undefined) {
           lines.push('No summary record was produced. Check the step logs for config or discovery errors.');
         } else {
@@ -134,9 +125,7 @@ runs:
             lines.push('', '| Harness | Scenario | Result | Failed jobs |', '| --- | --- | --- | --- |');
 
             for (const cell of summary.matrix.cells) {
-              const harness = [cell.harness.id, cell.harness.model, cell.harness.permissionMode]
-                .filter(Boolean)
-                .join('/');
+              const harness = formatHarness(cell.harness);
               const result = `${cell.passed}/${cell.total} passed`;
               const failedJobs = cell.failedJobs.length === 0 ? 'none' : cell.failedJobs.join('<br>');
               lines.push(`| ${harness} | ${cell.scenarioName} | ${result} | ${failedJobs} |`);
@@ -152,7 +141,7 @@ runs:
         for (const {job, diagnostic} of failedDiagnostics) {
           lines.push(
             '',
-            `Failure details for ${job.scenario.name}:`,
+            `Failure details for ${formatHarness(job.harness)} / ${job.scenario.name}:`,
             '```text',
             diagnostic.slice(0, 2000),
             '```',
@@ -172,18 +161,16 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         PR_NUMBER: ${{ inputs.pr-number }}
-        DYNOBOX_HARNESS: ${{ inputs.harness }}
-        SUMMARY_PATH: dynobox-${{ inputs.harness }}.md
+        SUMMARY_PATH: dynobox.md
       run: |
         node --input-type=module <<'NODE'
         import {existsSync, readFileSync} from 'node:fs';
 
-        const harness = process.env.DYNOBOX_HARNESS;
-        const marker = `<!-- dynobox-report:${harness} -->`;
+        const marker = '<!-- dynobox-report -->';
         const summaryPath = process.env.SUMMARY_PATH;
         const summary = existsSync(summaryPath)
           ? readFileSync(summaryPath, 'utf8')
-          : `## Dynobox (${harness})\n\nNo report summary was produced. Check the workflow logs.\n`;
+          : '## Dynobox\n\nNo report summary was produced. Check the workflow logs.\n';
         const body = `${marker}\n${summary}`;
         const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
         const issueNumber = process.env.PR_NUMBER;
@@ -202,7 +189,7 @@ runs:
           return response;
         };
 
-        console.log(`Upserting Dynobox ${harness} report comment on PR #${issueNumber}.`);
+        console.log(`Upserting Dynobox report comment on PR #${issueNumber}.`);
         try {
           const existing = await request(`${baseUrl}?per_page=100`, {headers}).then((response) => response.json());
           const comment = existing.find((item) => item.body?.includes(marker));
@@ -213,14 +200,14 @@ runs:
               headers: {...headers, 'content-type': 'application/json'},
               body: JSON.stringify({body}),
             });
-            console.log(`Created Dynobox ${harness} report comment.`);
+            console.log('Created Dynobox report comment.');
           } else {
             await request(comment.url, {
               method: 'PATCH',
               headers: {...headers, 'content-type': 'application/json'},
               body: JSON.stringify({body}),
             });
-            console.log(`Updated Dynobox ${harness} report comment.`);
+            console.log('Updated Dynobox report comment.');
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -242,17 +229,17 @@ runs:
       if: always()
       uses: actions/upload-artifact@v7
       with:
-        name: dynobox-${{ inputs.harness }}-report
-        path: dynobox-${{ inputs.harness }}.ndjson
+        name: dynobox-report
+        path: |
+          dynobox.ndjson
+          dynobox.md
         if-no-files-found: warn
 
     - name: Fail on Dynobox status
       if: always()
       shell: bash
-      env:
-        DYNOBOX_HARNESS: ${{ inputs.harness }}
       run: |
-        status_path="dynobox-${DYNOBOX_HARNESS}.status"
+        status_path="dynobox.status"
         status=1
         if [ -f "$status_path" ]; then
           status="$(cat "$status_path")"

@@ -9,24 +9,17 @@ import {
 
 const here = dyno.here(import.meta.url);
 
-// TODO: Add model selection flag
-const harnessesById = {
-  "claude-code": {
+const harnesses = [
+  {
     id: "claude-code",
-    model: process.env.DYNOBOX_CLAUDE_MODEL ?? "sonnet",
+    model: "sonnet",
   },
-  codex: {
+  {
     id: "codex",
-    model: process.env.DYNOBOX_CODEX_MODEL ?? "gpt-5.4-mini",
+    model: "gpt-5.4-mini",
     permissionMode: "dangerous",
   },
-};
-
-const selectedHarness = process.env.DYNOBOX_HARNESS;
-const harnesses =
-  selectedHarness === "claude-code" || selectedHarness === "codex"
-    ? [harnessesById[selectedHarness]]
-    : [harnessesById["claude-code"], harnessesById.codex];
+];
 
 export default defineDyno({
   name: "commit-skill-smoke-test",

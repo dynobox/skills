@@ -14,21 +14,12 @@ permissions:
 jobs:
   dynobox:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    name: dynobox (${{ matrix.harness }})
+    name: dynobox
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        harness:
-          - claude-code
-          - codex
 
     env:
       DYNOBOX_TARGET: .agents/skills
-      DYNOBOX_HARNESS: ${{ matrix.harness }}
-      DYNOBOX_CLAUDE_MODEL: sonnet
-      DYNOBOX_CODEX_MODEL: gpt-5.4-mini
 
     steps:
       - name: Check out repository
@@ -40,11 +31,8 @@ jobs:
         uses: ./.github/actions/run-dynobox
         with:
           target: ${{ env.DYNOBOX_TARGET }}
-          harness: ${{ env.DYNOBOX_HARNESS }}
-          claude-model: ${{ env.DYNOBOX_CLAUDE_MODEL }}
-          codex-model: ${{ env.DYNOBOX_CODEX_MODEL }}
-          anthropic-api-key: ${{ matrix.harness == 'claude-code' && secrets.ANTHROPIC_API_KEY || '' }}
-          openai-api-key: ${{ matrix.harness == 'codex' && secrets.OPENAI_API_KEY || '' }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           comment-on-pr: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && 'true' || 'false' }}
           github-token: ${{ github.token }}
           pr-number: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
