@@ -203,23 +203,28 @@ runs:
         };
 
         console.log(`Upserting Dynobox ${harness} report comment on PR #${issueNumber}.`);
-        const existing = await request(`${baseUrl}?per_page=100`, {headers}).then((response) => response.json());
-        const comment = existing.find((item) => item.body?.includes(marker));
+        try {
+          const existing = await request(`${baseUrl}?per_page=100`, {headers}).then((response) => response.json());
+          const comment = existing.find((item) => item.body?.includes(marker));
 
-        if (comment === undefined) {
-          await request(baseUrl, {
-            method: 'POST',
-            headers: {...headers, 'content-type': 'application/json'},
-            body: JSON.stringify({body}),
-          });
-          console.log(`Created Dynobox ${harness} report comment.`);
-        } else {
-          await request(comment.url, {
-            method: 'PATCH',
-            headers: {...headers, 'content-type': 'application/json'},
-            body: JSON.stringify({body}),
-          });
-          console.log(`Updated Dynobox ${harness} report comment.`);
+          if (comment === undefined) {
+            await request(baseUrl, {
+              method: 'POST',
+              headers: {...headers, 'content-type': 'application/json'},
+              body: JSON.stringify({body}),
+            });
+            console.log(`Created Dynobox ${harness} report comment.`);
+          } else {
+            await request(comment.url, {
+              method: 'PATCH',
+              headers: {...headers, 'content-type': 'application/json'},
+              body: JSON.stringify({body}),
+            });
+            console.log(`Updated Dynobox ${harness} report comment.`);
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.log(`::warning::Could not upsert Dynobox PR comment: ${message.replaceAll('\n', ' ')}`);
         }
         NODE
 
