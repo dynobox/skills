@@ -9,12 +9,12 @@ This is a standalone project for trying Dynobox the way a real AI-assisted codeb
 
 ## Included Example
 
-The included `commit` skill is copied from the dynobox repo with its internal `dyno/` folder and fixtures. The scenario creates a scratch git repository, makes a README change, asks the agent to use the commit skill, and evaluates that the agent follows a safe commit workflow.
+The included `commit` skill is copied from the dynobox repo with its internal `dyno/` folder and fixtures. The scenario creates a scratch git repository from an automatically copied README fixture, makes a README change, asks the agent to use the commit skill, and evaluates that the agent follows a safe commit workflow.
 
 The evaluation checks that the agent:
 
 - inspects status, diff, and recent commits
-- invokes the `commit` skill
+- references the `commit` skill instructions
 - stages relevant changes
 - creates a commit
 - does not push
@@ -50,9 +50,14 @@ secrets before enabling the workflow:
 
 ## Version Note
 
-This project intentionally uses `dynobox run .agents/skills`. That command relies on Dynobox directory discovery for `*.dyno.*` files and requires Dynobox 0.4.0 or newer.
+This project intentionally uses `dynobox run .agents/skills`. That command relies on Dynobox directory discovery for `*.dyno.*` files and requires Dynobox 0.7.0 or newer.
+
+The commit dyno uses Dynobox 0.7 SDK conveniences: adjacent `fixtures/` content
+is copied into each scenario work directory automatically, and skill dynos under
+`.agents/skills/<name>/` automatically receive that skill's `SKILL.md`. Command
+assertions such as `command.called("git", { args: ["status"] })` check normalized
+observed shell commands instead of raw shell-string regexes.
 
 Single-harness npm scripts use Dynobox's `--harness` flag for local debugging.
-In Dynobox 0.4.0, that flag selects a harness by ID but does not preserve the
-configured model metadata from the dyno file, so the full `npm run test:agents`
-command and CI are the source of truth for the dyno-defined harness matrix.
+The full `npm run test:agents` command and CI remain the source of truth for the
+dyno-defined harness matrix.

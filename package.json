@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Standalone Dynobox examples and npm install smoke project",
   "scripts": {
+    "dyno:discover": "dynobox discover",
+    "dyno:validate": "dynobox validate",
+    "dyno:run": "dynobox run",
     "test:agents": "dynobox run .agents/skills",
     "test:agents:debug": "dynobox run .agents/skills --debug",
     "test:agents:claude": "dynobox run .agents/skills --harness claude-code",
@@ -13,7 +16,7 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "dynobox": "^0.4.0"
+    "dynobox": "^0.7.0"
   },
   "private": true
 }
