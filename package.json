@@ -16,7 +16,7 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "dynobox": "^0.7.0"
+    "dynobox": "^0.7.1"
   },
   "private": true
 }
