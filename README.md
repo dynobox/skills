@@ -1,5 +1,7 @@
 # Dynobox Examples
 
+[![Dynobox](https://github.com/dynobox/skills/actions/workflows/dynobox.yml/badge.svg?branch=main)](https://github.com/dynobox/skills/actions/workflows/dynobox.yml)
+
 This is a standalone project for trying Dynobox the way a real AI-assisted codebase would use it. It mirrors the dynobox repo pattern:
 
 - project skills live in `.agents/skills/<skill-name>/SKILL.md`
@@ -21,6 +23,8 @@ The evaluation checks that the agent:
 - does not amend
 
 ## Run It
+
+The latest Dynobox CI runs are available in the [Dynobox workflow](https://github.com/dynobox/skills/actions/workflows/dynobox.yml), including the generated summary, PR comment, and `dynobox-report` artifact.
 
 ```sh
 npm ci
