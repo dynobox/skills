@@ -44,7 +44,13 @@ Full authoring reference: <https://docs.dynobox.xyz/config-authoring.md>
 6. **Add fixtures** in `<skill-root>/dyno/fixtures/` for any files the scenario
    needs. The adjacent `fixtures/` directory is copied into each scenario work
    directory automatically — do not copy it manually in `setup`.
-7. **Validate before finishing.** Run `node --check <file>` for syntax, then
+7. **Stage `SKILL.md` for harnesses.** Dynobox auto-copies `SKILL.md` into
+   scenario workdirs only when the dyno lives under `.agents/skills/<name>/` or
+   `.claude/skills/<name>/`. Catalog roots such as `skills/<name>/` need an
+   explicit `setup` step (or fixture) that places `SKILL.md` where prompts and
+   `skill.referenced(...)` assertions expect it — typically the agent install
+   path the scenario simulates.
+8. **Validate before finishing.** Run `node --check <file>` for syntax, then
    `npx dynobox validate <path-to-dyno>` (schema check, no harnesses run).
    Fix and re-validate until it exits 0 — a dyno that fails validation is not
    done. Only run `npx dynobox run <path> --debug` if the user asks for a
@@ -68,10 +74,11 @@ live under an agent-specific path such as `.agents/skills/<skill-name>/` or
 `.claude/skills/<skill-name>/`.
 
 Use `.mjs` with `defineDyno(...)`, not YAML: only JS/TS dynos get automatic
-adjacent-fixture attachment. When a dyno lives under the same skill root as its
-`SKILL.md`, Dynobox can copy that instruction file into each scenario work
-directory automatically — otherwise add a `setup` step that places `SKILL.md`
-where the harness will read it.
+adjacent-fixture attachment. Dynobox auto-copies `SKILL.md` only when the dyno
+is authored under `.agents/skills/<name>/` or `.claude/skills/<name>/` — not
+under catalog roots like `skills/<name>/`. For those layouts, add a `setup`
+step (see workflow step 7) that copies `SKILL.md` to the path your prompts and
+`skill.referenced(...)` assertions use.
 
 ## Mapping SKILL.md Instructions to Assertions
 
@@ -166,7 +173,8 @@ Copy the pattern from this repo's existing skill dyno fixtures, such as
   hidden in `eval`, substitution, or backgrounding `&` are not observed.
 - Artifact paths must be relative and stay inside the work directory.
 - Each scenario runs in a fresh temp directory: everything the agent needs must
-  come from `fixtures/`, `setup`, or the automatic `SKILL.md` copy.
+  come from `fixtures/`, `setup`, or Dynobox's automatic `SKILL.md` copy (agent
+  install roots only — see workflow step 7).
 - Keep assertions harness-agnostic when running a matrix — harnesses may batch
   commands or use different tools for equivalent behavior (use a top-level
   `anyOf` to accept `read_file` vs `cat`, for example).

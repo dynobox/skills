@@ -63,6 +63,7 @@ export default defineDyno({
           "WORDCOUNT.md",
         ),
         command.notCalled("dynobox", { args: ["run"] }),
+        command.notCalled("npx", { argsInOrder: ["dynobox", "run"] }),
         anyOf([
           command.called("npx", { args: ["dynobox", "validate"] }),
           command.called("dynobox", { args: ["validate"] }),

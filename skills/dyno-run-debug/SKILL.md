@@ -6,7 +6,8 @@ description: |
   `--debug` output with failed assertions), asks why a dyno run, scenario, or
   assertion failed, or wants a failing dyno fixed. Produces a root-cause
   diagnosis and proposed fixes; never applies a change without approval, and
-  verifies every dyno change with `node --check` and `npx dynobox validate`.
+  verifies every dyno change with `npx dynobox validate` (and `node --check` for
+  JS/TS dynos only).
 ---
 
 # Dyno Run Debug
@@ -21,8 +22,10 @@ Two hard rules:
 1. **Never apply a fix unprompted.** Diagnose, present ranked fix options with
    concrete diffs, and wait for the user to pick one.
 2. **Every changed or reconstructed dyno file must be verified** with
-   `node --check <file>` and `npx dynobox validate <file>` before you present
-   it as done or rerun any harness against it.
+   `npx dynobox validate <file>` before you present it as done or rerun any
+   harness against it. For JS/TS dynos (`.mjs`, `.js`, `.ts`, `.mts`), also run
+   `node --check <file>` first — skip `node --check` for YAML dynos; it only
+   parses JavaScript and will fail even when `dynobox validate` would pass.
 
 ## Workflow
 
@@ -150,7 +153,8 @@ After the user approves a fix, verify cheapest-first. Steps 1–2 are mandatory
 for any dyno file you touched or reconstructed; steps 3–4 need the user's
 go-ahead (they invoke real harnesses):
 
-1. `node --check <file>` — syntax.
+1. For JS/TS dynos only (`.mjs`, `.js`, `.ts`, `.mts`): `node --check <file>`
+   — syntax. Skip for YAML dynos.
 2. `npx dynobox validate <file>` — schema/config validity, no harness runs.
 3. `npx dynobox run <dyno-path> --scenario "<failed scenario>" --debug` — does
    the failing job now pass?
@@ -174,5 +178,6 @@ End with a concise record the user can paste into an issue:
 - Key evidence: <log lines, recovered artifacts, passing-vs-failing diff>
 - Root cause: <bucket A/B/C + one-sentence cause>
 - Proposed fix(es): <ranked, with file + concrete edit>
-- Verification: <which ladder steps ran and their actual results>
+- Verification: <which ladder steps ran and their actual results, or "not run
+  yet" for diagnose-only reports>
 ```

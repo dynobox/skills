@@ -63,7 +63,7 @@ FAIL yaml-regression - codex/gpt-5.4-mini - iteration 1
   log: debug-workdir/dynobox-transcript.log
 \`\`\`
 
-The debug work dir and the temp dyno still exist in this scratch workspace at debug-workdir/ and tmp/failing.dyno.yaml. Diagnose the root cause, reproduce the exact failing validation check if needed, and end with the Dynobox Debug Record format from the skill.`,
+The debug work dir and the temp dyno still exist in this scratch workspace at debug-workdir/ and tmp/failing.dyno.yaml. Diagnose the root cause, reproduce the exact failing validation check if needed, and end with the Dynobox Debug Record format from the skill. Include a Verification line stating which ladder steps were not run yet.`,
       assertions: [
         skill.referenced("dyno-run-debug"),
         anyOf([
