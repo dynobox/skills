@@ -1,0 +1,4 @@
+name: failing-validation-fixture
+harnesses:
+  - codex
+scenarios: []

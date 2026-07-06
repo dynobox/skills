@@ -1,52 +1,83 @@
-# Dynobox Examples
+# Dynobox Skills
 
+[![skills.sh](https://skills.sh/b/dynobox/skills)](https://skills.sh/dynobox/skills)
 [![Dynobox](https://github.com/dynobox/skills/actions/workflows/dynobox.yml/badge.svg?branch=main)](https://github.com/dynobox/skills/actions/workflows/dynobox.yml)
 
-This is a standalone project for trying Dynobox the way a real AI-assisted codebase would use it. It mirrors the dynobox repo pattern:
+Skills for building and debugging Dynobox agent tests. Each skill is a small,
+installable instruction package with its own Dynobox coverage.
 
-- project skills live in `.agents/skills/<skill-name>/SKILL.md`
-- each skill owns its Dynobox tests in `.agents/skills/<skill-name>/dyno`
-- `dynobox run .agents/skills` discovers and runs the skill dynos recursively
-- Claude project permissions live in `.claude`
+## Install
 
-## Included Example
+Install all skills from this repository:
 
-The included `commit` skill is copied from the dynobox repo with its internal `dyno/` folder and fixtures. The scenario creates a scratch git repository from an automatically copied README fixture, makes a README change, asks the agent to use the commit skill, and evaluates that the agent follows a safe commit workflow.
+```sh
+npx skills add dynobox/skills
+```
 
-The evaluation checks that the agent:
+Install a single skill:
 
-- inspects status, diff, and recent commits
-- references the `commit` skill instructions
-- stages relevant changes
-- creates a commit
-- does not push
-- does not amend
+```sh
+npx skills add dynobox/skills --skill dyno-from-skill
+npx skills add dynobox/skills --skill dyno-run-debug
+```
 
-## Run It
+List available skills without installing:
 
-The latest Dynobox CI runs are available in the [Dynobox workflow](https://github.com/dynobox/skills/actions/workflows/dynobox.yml), including the generated summary, PR comment, and `dynobox-report` artifact.
+```sh
+npx skills add dynobox/skills --list
+```
+
+## Skills
+
+| Skill | Use it when | Dynobox coverage |
+| --- | --- | --- |
+| [`dyno-from-skill`](./skills/dyno-from-skill/SKILL.md) | You need to generate a Dynobox test from a skill's `SKILL.md`. | [`dyno-from-skill.dyno.mjs`](./skills/dyno-from-skill/dyno/dyno-from-skill.dyno.mjs) |
+| [`dyno-run-debug`](./skills/dyno-run-debug/SKILL.md) | You need to diagnose failed `dynobox run` output and propose a verified fix. | [`dyno-run-debug.dyno.mjs`](./skills/dyno-run-debug/dyno/dyno-run-debug.dyno.mjs) |
+
+## Repository Layout
+
+```text
+skills/<skill-name>/
+  SKILL.md
+  dyno/
+    <skill-name>.dyno.mjs
+    fixtures/            # optional, copied into each scenario workdir
+```
+
+This repo keeps skills under top-level `skills/`, matching the common
+`skills.sh` catalog layout. Dynobox runs against the same tree, so the published
+skill instructions and their tests stay colocated.
+
+## Test
+
+Install dependencies and validate every real dyno config:
 
 ```sh
 npm ci
-npm run test:agents
+npm run dyno:validate
 ```
 
-To run only one harness for local debugging:
+Run the full agent harness matrix:
 
 ```sh
-npm run test:agents:claude
-npm run test:agents:codex
+npm run dyno:run
 ```
 
-For debugging:
+Run a single harness for local debugging:
 
 ```sh
-npm run test:agents:debug
+npm run dyno:run:claude
+npm run dyno:run:codex
 ```
 
-CI runs the same Dynobox command in GitHub Actions once. The dyno file defines
-the Claude Code and Codex harness matrix, and the workflow publishes one check,
-one summary, one PR comment, and one build artifact. Configure these repository
+Run with debug logs:
+
+```sh
+npm run dyno:run:debug
+```
+
+CI runs `dynobox run skills` in GitHub Actions and publishes a workflow
+summary, PR comment, and `dynobox-report` artifact. Configure these repository
 secrets before enabling the workflow:
 
 - `ANTHROPIC_API_KEY` for Claude Code.
@@ -54,14 +85,11 @@ secrets before enabling the workflow:
 
 ## Version Note
 
-This project intentionally uses `dynobox run .agents/skills`. That command relies on Dynobox directory discovery for `*.dyno.*` files and requires Dynobox 0.7.0 or newer.
+This project uses `dynobox run skills`, which relies on Dynobox
+directory discovery for `*.dyno.*` files and requires Dynobox 0.7.0 or newer.
 
-The commit dyno uses Dynobox 0.7 SDK conveniences: adjacent `fixtures/` content
-is copied into each scenario work directory automatically, and skill dynos under
-`.agents/skills/<name>/` automatically receive that skill's `SKILL.md`. Command
-assertions such as `command.called("git", { args: ["status"] })` check normalized
-observed shell commands instead of raw shell-string regexes.
-
-Single-harness npm scripts use Dynobox's `--harness` flag for local debugging.
-The full `npm run test:agents` command and CI remain the source of truth for the
-dyno-defined harness matrix.
+Adjacent `fixtures/` content is copied into each scenario work directory
+automatically. These dynos set up consumer-style `.agents/skills/<name>/`
+fixtures where skill-reference assertions need that layout. Command assertions
+such as `command.called("git", { args: ["status"] })` check normalized observed
+shell commands instead of raw shell-string regexes.

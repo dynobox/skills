@@ -1,0 +1,11 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Dynobox",
+      "description": "Skills for authoring, validating, and debugging Dynobox agent tests.",
+      "skills": ["dyno-from-skill", "dyno-run-debug"]
+    }
+  ]
+}

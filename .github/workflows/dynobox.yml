@@ -12,6 +12,21 @@ permissions:
   pull-requests: write
 
 jobs:
+  skills-catalog:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    name: skills-catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Verify skills catalog
+        uses: ./.github/actions/verify-skills-catalog
+
   dynobox:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     name: dynobox
@@ -19,7 +34,7 @@ jobs:
     timeout-minutes: 20
 
     env:
-      DYNOBOX_TARGET: .agents/skills
+      DYNOBOX_TARGET: skills
 
     steps:
       - name: Check out repository

@@ -1,0 +1,35 @@
+prefix_rule(
+  pattern = ["npx"],
+  decision = "allow",
+  justification = "This fixture is an isolated Dynobox scratch workspace; npx dynobox validate reproduces the pasted failed check.",
+)
+
+prefix_rule(
+  pattern = ["dynobox"],
+  decision = "allow",
+  justification = "This fixture is an isolated Dynobox scratch workspace; dynobox validate reproduces the pasted failed check.",
+)
+
+prefix_rule(
+  pattern = ["node"],
+  decision = "allow",
+  justification = "This fixture is an isolated Dynobox scratch workspace; node may be used for cheap syntax checks.",
+)
+
+prefix_rule(
+  pattern = ["ls"],
+  decision = "allow",
+  justification = "This fixture is an isolated Dynobox scratch workspace; ls inspects debug artifacts.",
+)
+
+prefix_rule(
+  pattern = ["cat"],
+  decision = "allow",
+  justification = "This fixture is an isolated Dynobox scratch workspace; cat inspects debug artifacts.",
+)
+
+prefix_rule(
+  pattern = ["jq"],
+  decision = "allow",
+  justification = "This fixture is an isolated Dynobox scratch workspace; jq inspects debug artifacts.",
+)

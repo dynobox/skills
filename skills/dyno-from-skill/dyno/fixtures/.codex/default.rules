@@ -1,0 +1,11 @@
+prefix_rule(
+  pattern = ["node"],
+  decision = "allow",
+  justification = "This fixture is an isolated Dynobox scratch workspace; node is used only to syntax-check the generated dyno file.",
+)
+
+prefix_rule(
+  pattern = ["mkdir"],
+  decision = "allow",
+  justification = "This fixture is an isolated Dynobox scratch workspace and the task creates a dyno directory inside it.",
+)

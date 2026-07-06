@@ -1,0 +1,2 @@
+{"message":{"content":[{"type":"text","text":"Run failed in codex."}]}}
+{"message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"npx dynobox validate tmp/failing.dyno.yaml"}}]}}

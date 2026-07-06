@@ -1,0 +1,14 @@
+name: Verify skills catalog
+description: Confirm skills in this repo are discoverable by the skills CLI.
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+
+    - name: List discoverable skills
+      shell: bash
+      run: npx skills@latest add . --list
