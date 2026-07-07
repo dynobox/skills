@@ -70,8 +70,15 @@ The debug work dir and the temp dyno still exist in this scratch workspace at de
           tool.called("read_file", {
             path: "debug-workdir/dynobox-tool-events.json",
           }),
-          command.called("cat", { args: ["debug-workdir/dynobox-tool-events.json"] }),
-          command.called("jq", { args: ["debug-workdir/dynobox-tool-events.json"] }),
+          command.called("cat", {
+            originalMatches: /debug-workdir\/dynobox-tool-events\.json/,
+          }),
+          command.called("jq", {
+            originalMatches: /debug-workdir\/dynobox-tool-events\.json/,
+          }),
+          command.called("sed", {
+            originalMatches: /debug-workdir\/dynobox-tool-events\.json/,
+          }),
         ]),
         anyOf([
           command.called("npx", {
