@@ -1,0 +1,44 @@
+{
+  "jobs": [
+    {
+      "scenario": "yaml-regression",
+      "harness": "claude-code",
+      "model": "sonnet",
+      "iteration": 1,
+      "status": "passed",
+      "observedParsedCommands": [
+        {
+          "executable": "dynobox",
+          "argv": ["validate", "tmp/regression.dyno.yaml"]
+        }
+      ],
+      "observedSkillFiles": [".agents/skills/dyno-run-debug/SKILL.md"]
+    },
+    {
+      "scenario": "yaml-regression",
+      "harness": "codex",
+      "model": "gpt-5.4-mini",
+      "iteration": 1,
+      "status": "failed",
+      "failedAssertions": [
+        {
+          "type": "verify.command",
+          "expected": "dynobox validate tmp/failing.dyno.yaml exits 0",
+          "observed": "exitCode 1; stderr includes Too small: expected array to have >=1 items"
+        }
+      ],
+      "observedParsedCommands": [
+        {
+          "executable": "dynobox",
+          "argv": ["validate", "tmp/failing.dyno.yaml"]
+        }
+      ],
+      "observedShellCommands": [
+        "npx dynobox validate tmp/failing.dyno.yaml"
+      ],
+      "observedSkillFiles": [".agents/skills/dyno-run-debug/SKILL.md"],
+      "workDir": "debug-workdir",
+      "log": "debug-workdir/dynobox-transcript.log"
+    }
+  ]
+}

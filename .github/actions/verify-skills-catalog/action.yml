@@ -1,0 +1,43 @@
+name: Verify skills catalog
+description: Confirm skills in this repo are discoverable by the skills CLI and match skills.sh.json.
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+
+    - name: List discoverable skills
+      shell: bash
+      run: npx skills@latest add . --list
+
+    - name: Verify skills.sh.json matches skill directories
+      shell: bash
+      run: |
+        node --input-type=module <<'NODE'
+        import { existsSync, readFileSync } from 'node:fs';
+
+        const catalog = JSON.parse(readFileSync('skills.sh.json', 'utf8'));
+        const referenced = (catalog.groupings ?? []).flatMap((group) => group.skills ?? []);
+
+        const missing = referenced.filter((name) => {
+          const skillPath = `skills/${name}/SKILL.md`;
+          if (!existsSync(skillPath)) {
+            return true;
+          }
+
+          const frontmatter = readFileSync(skillPath, 'utf8');
+          return !new RegExp(`^name:\\s*${name}\\s*$`, 'm').test(frontmatter);
+        });
+
+        if (missing.length > 0) {
+          console.error(
+            `skills.sh.json references skills with no matching skills/<name>/SKILL.md: ${missing.join(', ')}`,
+          );
+          process.exit(1);
+        }
+
+        console.log(`Verified ${referenced.length} skill(s) referenced in skills.sh.json.`);
+        NODE

@@ -1,19 +1,19 @@
 {
-  "name": "dynobox-examples",
+  "name": "dynobox-skills",
   "version": "1.0.0",
-  "description": "Standalone Dynobox examples and npm install smoke project",
+  "description": "Dynobox skills and agent test coverage",
   "scripts": {
-    "dyno:discover": "dynobox discover",
-    "dyno:validate": "dynobox validate",
-    "dyno:run": "dynobox run",
-    "test:agents": "dynobox run .agents/skills",
-    "test:agents:debug": "dynobox run .agents/skills --debug",
-    "test:agents:claude": "dynobox run .agents/skills --harness claude-code",
-    "test:agents:codex": "dynobox run .agents/skills --harness codex --permission-mode dangerous"
+    "dyno:discover": "dynobox discover skills",
+    "dyno:validate": "dynobox validate skills",
+    "dyno:run": "dynobox run skills",
+    "dyno:run:debug": "dynobox run skills --debug",
+    "dyno:run:claude": "dynobox run skills --harness claude-code",
+    "dyno:run:codex": "dynobox run skills --harness codex --permission-mode dangerous",
+    "skills:list": "npx skills@latest add . --list"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "devDependencies": {
     "dynobox": "^0.7.1"

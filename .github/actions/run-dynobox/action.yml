@@ -5,7 +5,7 @@ inputs:
   target:
     description: Dynobox target path.
     required: false
-    default: .agents/skills
+    default: skills
   anthropic-api-key:
     description: Anthropic API key for claude-code runs.
     required: false
@@ -64,18 +64,12 @@ runs:
           exit 1
         fi
 
-    - name: Log in Codex
-      shell: bash
-      env:
-        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
-      run: printenv OPENAI_API_KEY | codex login --with-api-key
-
     - name: Run Dynobox
       shell: bash
       env:
         DYNOBOX_TARGET: ${{ inputs.target }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
-        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        CODEX_API_KEY: ${{ inputs.openai-api-key }}
       run: |
         report_path="dynobox.ndjson"
         summary_path="dynobox.md"
@@ -133,19 +127,43 @@ runs:
           }
         }
 
-        const failedDiagnostics = jobs
-          .filter((job) => job.passed === false && job.diagnostics?.length > 0)
-          .flatMap((job) => job.diagnostics.map((diagnostic) => ({job, diagnostic})))
-          .slice(0, 3);
+        const failedJobs = jobs.filter((job) => job.passed === false);
 
-        for (const {job, diagnostic} of failedDiagnostics) {
-          lines.push(
-            '',
-            `Failure details for ${formatHarness(job.harness)} / ${job.scenario.name}:`,
-            '```text',
-            diagnostic.slice(0, 2000),
-            '```',
+        for (const job of failedJobs.slice(0, 5)) {
+          const harnessScenario = `${formatHarness(job.harness)} / ${job.scenario.name}`;
+
+          for (const diagnostic of (job.diagnostics ?? []).slice(0, 3)) {
+            lines.push(
+              '',
+              `Failure details for ${harnessScenario}:`,
+              '```text',
+              diagnostic.slice(0, 2000),
+              '```',
+            );
+          }
+
+          const failedAssertions = (job.assertions ?? []).filter(
+            (assertion) => assertion.passed === false,
           );
+
+          for (const assertion of failedAssertions.slice(0, 5)) {
+            const assertionName = assertion.label ?? assertion.assertionId ?? assertion.type;
+            lines.push(
+              '',
+              `Failed assertion for ${harnessScenario}: ${assertionName}`,
+              '```text',
+              String(assertion.message ?? 'No assertion message was recorded.').slice(0, 4000),
+              '```',
+            );
+          }
+
+          if ((job.diagnostics ?? []).length === 0 && failedAssertions.length === 0) {
+            lines.push(
+              '',
+              `Failure details for ${harnessScenario}:`,
+              'No diagnostics or assertion messages were recorded. Download the dynobox-report artifact for the full JSON report.',
+            );
+          }
         }
         lines.push('');
 
