@@ -16,7 +16,7 @@
   "license": "MIT",
   "type": "module",
   "devDependencies": {
-    "dynobox": "^0.7.1"
+    "dynobox": "^0.8.0"
   },
   "private": true
 }
