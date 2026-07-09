@@ -89,6 +89,9 @@ The debug work dir and the temp dyno still exist in this scratch workspace at de
             args: ["validate"],
             argsMatching: [/\/?tmp\/failing\.dyno\.yaml$/],
           }),
+          tool.called("shell", {
+            matches: "dynobox\\s+validate\\s+.*tmp/failing\\.dyno\\.yaml",
+          }),
         ]),
         command.notCalled("npx", { argsInOrder: ["dynobox", "run"] }),
         command.notCalled("dynobox", { args: ["run"] }),
@@ -112,10 +115,15 @@ After editing, run node --check tmp/approved-fix.dyno.mjs and npx dynobox valida
         skill.referenced("dyno-run-debug"),
         artifact.contains("tmp/approved-fix.dyno.mjs", "approved fix smoke"),
         artifact.contains("tmp/approved-fix.dyno.mjs", "finalMessage.contains"),
-        command.called("node", {
-          args: ["--check"],
-          argsMatching: [/\/?tmp\/approved-fix\.dyno\.mjs$/],
-        }),
+        anyOf([
+          command.called("node", {
+            args: ["--check"],
+            argsMatching: [/\/?tmp\/approved-fix\.dyno\.mjs$/],
+          }),
+          tool.called("shell", {
+            matches: "node\\s+--check\\s+.*tmp/approved-fix\\.dyno\\.mjs",
+          }),
+        ]),
         anyOf([
           command.called("npx", {
             args: ["dynobox", "validate"],
@@ -124,6 +132,9 @@ After editing, run node --check tmp/approved-fix.dyno.mjs and npx dynobox valida
           command.called("dynobox", {
             args: ["validate"],
             argsMatching: [/\/?tmp\/approved-fix\.dyno\.mjs$/],
+          }),
+          tool.called("shell", {
+            matches: "dynobox\\s+validate\\s+.*tmp/approved-fix\\.dyno\\.mjs",
           }),
         ]),
         command.notCalled("npx", { argsInOrder: ["dynobox", "run"] }),
