@@ -77,6 +77,7 @@ runs:
 
         set +e
         npx dynobox run "$DYNOBOX_TARGET" \
+          --debug \
           --reporter json \
           > "$report_path"
         status=$?
@@ -161,7 +162,7 @@ runs:
             lines.push(
               '',
               `Failure details for ${harnessScenario}:`,
-              'No diagnostics or assertion messages were recorded. Download the dynobox-report artifact for the full JSON report.',
+              `No diagnostics or assertion messages were recorded. Download the dynobox-report-attempt-${process.env.GITHUB_RUN_ATTEMPT ?? 'unknown'} artifact for the full JSON report.`,
             );
           }
         }
@@ -247,11 +248,23 @@ runs:
       if: always()
       uses: actions/upload-artifact@v7
       with:
-        name: dynobox-report
+        name: dynobox-report-attempt-${{ github.run_attempt }}
         path: |
           dynobox.ndjson
           dynobox.md
         if-no-files-found: warn
+
+    - name: Upload Dynobox debug artifacts
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: dynobox-debug-attempt-${{ github.run_attempt }}
+        path: |
+          /tmp/dynobox-job-*/dynobox-transcript.log
+          /tmp/dynobox-job-*/dynobox-chat-history.jsonl
+          /tmp/dynobox-job-*/dynobox-tool-events.json
+          /tmp/dynobox-job-*/dynobox-stderr.log
+        if-no-files-found: ignore
 
     - name: Fail on Dynobox status
       if: always()

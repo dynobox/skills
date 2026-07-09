@@ -82,10 +82,12 @@ The debug work dir and the temp dyno still exist in this scratch workspace at de
         ]),
         anyOf([
           command.called("npx", {
-            argsInOrder: ["dynobox", "validate", "tmp/failing.dyno.yaml"],
+            args: ["dynobox", "validate"],
+            argsMatching: [/\/?tmp\/failing\.dyno\.yaml$/],
           }),
           command.called("dynobox", {
-            argsInOrder: ["validate", "tmp/failing.dyno.yaml"],
+            args: ["validate"],
+            argsMatching: [/\/?tmp\/failing\.dyno\.yaml$/],
           }),
         ]),
         command.notCalled("npx", { argsInOrder: ["dynobox", "run"] }),
@@ -111,14 +113,17 @@ After editing, run node --check tmp/approved-fix.dyno.mjs and npx dynobox valida
         artifact.contains("tmp/approved-fix.dyno.mjs", "approved fix smoke"),
         artifact.contains("tmp/approved-fix.dyno.mjs", "finalMessage.contains"),
         command.called("node", {
-          argsInOrder: ["--check", "tmp/approved-fix.dyno.mjs"],
+          args: ["--check"],
+          argsMatching: [/\/?tmp\/approved-fix\.dyno\.mjs$/],
         }),
         anyOf([
           command.called("npx", {
-            argsInOrder: ["dynobox", "validate", "tmp/approved-fix.dyno.mjs"],
+            args: ["dynobox", "validate"],
+            argsMatching: [/\/?tmp\/approved-fix\.dyno\.mjs$/],
           }),
           command.called("dynobox", {
-            argsInOrder: ["validate", "tmp/approved-fix.dyno.mjs"],
+            args: ["validate"],
+            argsMatching: [/\/?tmp\/approved-fix\.dyno\.mjs$/],
           }),
         ]),
         command.notCalled("npx", { argsInOrder: ["dynobox", "run"] }),
