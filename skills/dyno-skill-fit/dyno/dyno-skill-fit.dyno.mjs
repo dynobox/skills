@@ -1,10 +1,10 @@
 import {
   anyOf,
   artifact,
+  command,
   defineDyno,
   dyno,
   finalMessage,
-  http,
   skill,
   tool,
 } from "@dynobox/sdk";
@@ -36,15 +36,14 @@ export default defineDyno({
         `mkdir -p .agents/skills/dyno-skill-fit && cp ${here.q("../SKILL.md")} .agents/skills/dyno-skill-fit/SKILL.md`,
         `mkdir -p .agents/skills/dyno-skill-fit/references && cp ${here.q("../references/assertion-guidance.md")} .agents/skills/dyno-skill-fit/references/assertion-guidance.md`,
       ],
-      endpoints: {
-        authoringDocs: http.endpoint({
-          method: "GET",
-          url: "https://docs.dynobox.xyz/config-authoring.md",
-        }),
-      },
       assertions: [
         skill.referenced("dyno-skill-fit"),
-        http.called("authoringDocs", { status: 200 }),
+        command.called("curl", {
+          args: [
+            "-fsSL",
+            "https://docs.dynobox.xyz/config-authoring.md",
+          ],
+        }),
         anyOf([
           tool.called("read_file", { path: "target-skill/SKILL.md" }),
           tool.called("read_file", { path: "./target-skill/SKILL.md" }),

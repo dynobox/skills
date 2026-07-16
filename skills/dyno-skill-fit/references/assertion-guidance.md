@@ -1,8 +1,13 @@
 # Dynobox Assertion Guidance
 
-Fetch <https://docs.dynobox.xyz/config-authoring.md> before finalizing an
-assessment. Dynobox and `@dynobox/sdk` change; use `npx dynobox validate` as
-the compilation authority for the user's installed version.
+Fetch the current authoring documentation before finalizing an assessment:
+
+```bash
+curl -fsSL https://docs.dynobox.xyz/config-authoring.md
+```
+
+Dynobox and `@dynobox/sdk` change; use `npx dynobox validate` as the compilation
+authority for the user's installed version.
 
 ## Prefer Observable Behavior
 
