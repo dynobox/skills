@@ -5,7 +5,7 @@
     {
       "title": "Dynobox",
       "description": "Skills for authoring, validating, and debugging Dynobox agent tests.",
-      "skills": ["dyno-from-skill", "dyno-run-debug"]
+      "skills": ["dyno-from-skill", "dyno-run-debug", "dyno-skill-fit"]
     }
   ]
 }

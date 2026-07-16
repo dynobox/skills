@@ -19,6 +19,7 @@ Install a single skill:
 ```sh
 npx skills add dynobox/skills --skill dyno-from-skill
 npx skills add dynobox/skills --skill dyno-run-debug
+npx skills add dynobox/skills --skill dyno-skill-fit
 ```
 
 List available skills without installing:
@@ -33,6 +34,7 @@ npx skills add dynobox/skills --list
 | --- | --- | --- |
 | [`dyno-from-skill`](./skills/dyno-from-skill/SKILL.md) | You need to generate a Dynobox test from a skill's `SKILL.md`. | [`dyno-from-skill.dyno.mjs`](./skills/dyno-from-skill/dyno/dyno-from-skill.dyno.mjs) |
 | [`dyno-run-debug`](./skills/dyno-run-debug/SKILL.md) | You need to diagnose failed `dynobox run` output and propose a verified fix. | [`dyno-run-debug.dyno.mjs`](./skills/dyno-run-debug/dyno/dyno-run-debug.dyno.mjs) |
+| [`dyno-skill-fit`](./skills/dyno-skill-fit/SKILL.md) | You need to assess whether a skill is worth covering with Dynobox before authoring dynos. | [`dyno-skill-fit.dyno.mjs`](./skills/dyno-skill-fit/dyno/dyno-skill-fit.dyno.mjs) |
 
 ## Repository Layout
 
