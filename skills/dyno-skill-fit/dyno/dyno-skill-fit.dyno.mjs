@@ -25,6 +25,11 @@ export default defineDyno({
       model: "gpt-5.4-mini",
       permissionMode: "dangerous",
     },
+    {
+      id: "opencode",
+      model: "openai/gpt-5.4-mini",
+      permissionMode: "dangerous",
+    },
   ],
   scenarios: [
     {
